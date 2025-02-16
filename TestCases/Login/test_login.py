@@ -4,10 +4,8 @@ from selenium import webdriver
 import sys
 import os
 
-# Ensure Resources folder is in the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
-# Import necessary modules
 from Resources.Login.login_keywords import LoginKeywords
 from Resources.Login.data_loader import load_test_data
 from Resources.test_report_utils import generate_test_summary
@@ -21,33 +19,29 @@ logging.basicConfig(
     filemode="w",
 )
 
-# Load test data from JSON file
 test_data = load_test_data("login_data.json")
 
 @pytest.fixture(scope="class")
 def setup():
-    """Setup and teardown for the browser session"""
     driver = webdriver.Chrome()
     driver.maximize_window()
     driver.get("https://practice.automationtesting.in/my-account/")
-    yield driver  # Provide driver instance to test
+    yield driver
     driver.quit()
 
 
-@pytest.fixture(scope="function")  # Ensure it's properly decorated as a fixture
+@pytest.fixture(scope="function")
 def setup_1():
-    """Setup and teardown for the browser session"""
     driver = webdriver.Chrome()
     driver.maximize_window()
     driver.get("https://practice.automationtesting.in/my-account/")
-    yield driver  # Provide driver instance to test
+    yield driver
     driver.quit()
 
 
 # Positive Case: Pass with valid username/password
 @pytest.mark.login
 def test_login_valid(setup):
-    """Test valid login functionality"""
     driver = setup
     login_page = LoginKeywords(driver)
 
@@ -64,7 +58,6 @@ def test_login_valid(setup):
 # Negative Case: Fail with invalid username/password
 @pytest.mark.login
 def test_login_invalid(setup):
-    """Test invalid login functionality"""
     driver = setup
     login_page = LoginKeywords(driver)
 
