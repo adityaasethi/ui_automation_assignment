@@ -33,6 +33,17 @@ def setup():
     yield driver  # Provide driver instance to test
     driver.quit()
 
+
+@pytest.fixture(scope="function")  # Ensure it's properly decorated as a fixture
+def setup_1():
+    """Setup and teardown for the browser session"""
+    driver = webdriver.Chrome()
+    driver.maximize_window()
+    driver.get("https://practice.automationtesting.in/my-account/")
+    yield driver  # Provide driver instance to test
+    driver.quit()
+
+
 # Positive Case: Pass with valid username/password
 @pytest.mark.login
 def test_login_valid(setup):
