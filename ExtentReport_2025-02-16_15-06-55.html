@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <style>body {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  /* do not increase min-width as some may use split screens */
+  min-width: 800px;
+  color: #999;
+}
+
+h1 {
+  font-size: 24px;
+  color: black;
+}
+
+h2 {
+  font-size: 16px;
+  color: black;
+}
+
+p {
+  color: black;
+}
+
+a {
+  color: #999;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/******************************
+ * SUMMARY INFORMATION
+ ******************************/
+#environment td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+}
+#environment tr:nth-child(odd) {
+  background-color: #f6f6f6;
+}
+
+/******************************
+ * TEST RESULT COLORS
+ ******************************/
+span.passed,
+.passed .col-result {
+  color: green;
+}
+
+span.skipped,
+span.xfailed,
+span.rerun,
+.skipped .col-result,
+.xfailed .col-result,
+.rerun .col-result {
+  color: orange;
+}
+
+span.error,
+span.failed,
+span.xpassed,
+.error .col-result,
+.failed .col-result,
+.xpassed .col-result {
+  color: red;
+}
+
+/******************************
+ * RESULTS TABLE
+ *
+ * 1. Table Layout
+ * 2. Extra
+ * 3. Sorting items
+ *
+ ******************************/
+/*------------------
+ * 1. Table Layout
+ *------------------*/
+#results-table {
+  border: 1px solid #e6e6e6;
+  color: #999;
+  font-size: 12px;
+  width: 100%;
+}
+#results-table th,
+#results-table td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+  text-align: left;
+}
+#results-table th {
+  font-weight: bold;
+}
+
+/*------------------
+ * 2. Extra
+ *------------------*/
+.log {
+  background-color: #e6e6e6;
+  border: 1px solid #e6e6e6;
+  color: black;
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+  height: 230px;
+  overflow-y: scroll;
+  padding: 5px;
+  white-space: pre-wrap;
+}
+.log:only-child {
+  height: inherit;
+}
+
+div.image {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.image img {
+  width: 320px;
+}
+
+div.video {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.video video {
+  overflow: hidden;
+  width: 320px;
+  height: 240px;
+}
+
+.collapsed {
+  display: none;
+}
+
+.expander::after {
+  content: " (show details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.collapser::after {
+  content: " (hide details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+/*------------------
+ * 3. Sorting items
+ *------------------*/
+.sortable {
+  cursor: pointer;
+}
+
+.sort-icon {
+  font-size: 0px;
+  float: left;
+  margin-right: 5px;
+  margin-top: 5px;
+  /*triangle*/
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+.inactive .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #E6E6E6;
+}
+.asc.active .sort-icon {
+  /*finish triangle*/
+  border-bottom: 8px solid #999;
+}
+.desc.active .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #999;
+}
+</style></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) { // eslint-disable-line no-redeclare
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function findAll(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sortColumn(elem) {
+    toggleSortStates(elem);
+    const colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    let key;
+    if (elem.classList.contains('result')) {
+        key = keyResult;
+    } else if (elem.classList.contains('links')) {
+        key = keyLink;
+    } else {
+        key = keyAlpha;
+    }
+    sortTable(elem, key(colIndex));
+}
+
+function showAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(showExtras);
+}
+
+function hideAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(hideExtras);
+}
+
+function showExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.remove('collapsed');
+    expandcollapse.classList.remove('expander');
+    expandcollapse.classList.add('collapser');
+}
+
+function hideExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.add('collapsed');
+    expandcollapse.classList.remove('collapser');
+    expandcollapse.classList.add('expander');
+}
+
+function showFilters() {
+    const filterItems = document.getElementsByClassName('filter');
+    for (let i = 0; i < filterItems.length; i++)
+        filterItems[i].hidden = false;
+}
+
+function addCollapse() {
+    // Add links for show/hide all
+    const resulttable = find('table#results-table');
+    const showhideall = document.createElement('p');
+    showhideall.innerHTML = '<a href="javascript:showAllExtras()">Show all details</a> / ' +
+                            '<a href="javascript:hideAllExtras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    findAll('.col-result').forEach(function(elem) {
+        const collapsed = getQueryParameter('collapsed') || 'Passed';
+        const extras = elem.parentNode.nextElementSibling;
+        const expandcollapse = document.createElement('span');
+        if (extras.classList.contains('collapsed')) {
+            expandcollapse.classList.add('expander');
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add('collapsed');
+            expandcollapse.classList.add('expander');
+        } else {
+            expandcollapse.classList.add('collapser');
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener('click', function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains('collapsed')) {
+                showExtras(event.currentTarget);
+            } else {
+                hideExtras(event.currentTarget);
+            }
+        });
+    });
+}
+
+function getQueryParameter(name) {
+    const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () { // eslint-disable-line no-unused-vars
+    resetSortHeaders();
+
+    addCollapse();
+
+    showFilters();
+
+    sortColumn(find('.initial-sort'));
+
+    findAll('.sortable').forEach(function(elem) {
+        elem.addEventListener('click',
+            function() {
+                sortColumn(elem);
+            }, false);
+    });
+}
+
+function sortTable(clicked, keyFunc) {
+    const rows = findAll('.results-table-row');
+    const reversed = !clicked.classList.contains('asc');
+    const sortedRows = sort(rows, keyFunc, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    const thead = document.getElementById('results-table-head');
+    document.getElementById('results-table').remove();
+    const parent = document.createElement('table');
+    parent.id = 'results-table';
+    parent.appendChild(thead);
+    sortedRows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName('BODY')[0].appendChild(parent);
+}
+
+function sort(items, keyFunc, reversed) {
+    const sortArray = items.map(function(item, i) {
+        return [keyFunc(item), i];
+    });
+
+    sortArray.sort(function(a, b) {
+        const keyA = a[0];
+        const keyB = b[0];
+
+        if (keyA == keyB) return 0;
+
+        if (reversed) {
+            return keyA < keyB ? 1 : -1;
+        } else {
+            return keyA > keyB ? 1 : -1;
+        }
+    });
+
+    return sortArray.map(function(item) {
+        const index = item[1];
+        return items[index];
+    });
+}
+
+function keyAlpha(colIndex) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[colIndex].firstChild.data.toLowerCase();
+    };
+}
+
+function keyLink(colIndex) {
+    return function(elem) {
+        const dataCell = elem.childNodes[1].childNodes[colIndex].firstChild;
+        return dataCell == null ? '' : dataCell.innerText.toLowerCase();
+    };
+}
+
+function keyResult(colIndex) {
+    return function(elem) {
+        const strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+            'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[colIndex].firstChild.data);
+    };
+}
+
+function resetSortHeaders() {
+    findAll('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    findAll('.sortable').forEach(function(elem) {
+        const icon = document.createElement('div');
+        icon.className = 'sort-icon';
+        icon.textContent = 'vvv';
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove('desc', 'active');
+        elem.classList.add('asc', 'inactive');
+    });
+}
+
+function toggleSortStates(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        resetSortHeaders();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function isAllRowsHidden(value) {
+    return value.hidden == false;
+}
+
+function filterTable(elem) { // eslint-disable-line no-unused-vars
+    const outcomeAtt = 'data-test-result';
+    const outcome = elem.getAttribute(outcomeAtt);
+    const classOutcome = outcome + ' results-table-row';
+    const outcomeRows = document.getElementsByClassName(classOutcome);
+
+    for(let i = 0; i < outcomeRows.length; i++){
+        outcomeRows[i].hidden = !elem.checked;
+    }
+
+    const rows = findAll('.results-table-row').filter(isAllRowsHidden);
+    const allRowsHidden = rows.length == 0 ? true : false;
+    const notFoundMessage = document.getElementById('not-found-message');
+    notFoundMessage.hidden = !allRowsHidden;
+}
+</script>
+    <h1>ExtentReport_2025-02-16_15-06-55.html</h1>
+    <p>Report generated on 16-Feb-2025 at 15:09:44 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.1.1</p>
+    <h2>Summary</h2>
+    <p>9 tests ran in 168.96 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="passed">5 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="failed">4 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable" col="duration">Duration</th>
+          <th class="sortable links" col="links">Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">TestCases/Address/test_shipping_address.py::test_invalid_shipping_address</td>
+          <td class="col-duration">19.26</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">setup = &lt;selenium.webdriver.chrome.webdriver.WebDriver (session=&quot;86e490577601a4ccad0af7d2d4cb8377&quot;)&gt;<br/><br/>    @pytest.mark.addresses<br/>    def test_invalid_shipping_address(setup):<br/>        driver = setup<br/>        login_page = LoginKeywords(driver)<br/>        addresses_page = AddressesPage(driver)<br/>    <br/>        test_data = load_test_data(&quot;login_data.json&quot;)<br/>        email = test_data[&quot;valid_user&quot;][&quot;email&quot;]<br/>        password = test_data[&quot;valid_user&quot;][&quot;password&quot;]<br/>    <br/>        logging.info(f&quot;Logging in with valid email: {email}&quot;)<br/>        login_page.enter_email(email)<br/>        login_page.enter_password(password)<br/>        login_page.click_login()<br/>        assert login_page.is_login_successful(), &quot;Login failed!&quot;<br/>        logging.info(&quot;Successfully logged in.&quot;)<br/>    <br/>        addresses_page.click_my_account()<br/>        addresses_page.navigate_to_addresses()<br/>        logging.info(&quot;Navigated to Addresses page.&quot;)<br/>    <br/>        logging.info(&quot;Clicking &#x27;Edit&#x27; for Shipping Address.&quot;)<br/>        addresses_page.click_edit_shipping_address()<br/>    <br/>        addresses_page.clear_shipping_address_field()<br/>        addresses_page.enter_shipping_address(&quot;&quot;)<br/>    <br/>        addresses_page.clear_shipping_city_field()<br/>        addresses_page.enter_shipping_city(&quot;&quot;)<br/>    <br/>        addresses_page.clear_shipping_pincode_field()<br/>        addresses_page.enter_shipping_pincode(&quot;&quot;)<br/>    <br/>        logging.info(&quot;Entered empty values for shipping details.&quot;)<br/>    <br/>        addresses_page.click_save_address()<br/>    <br/>        error_message = addresses_page.get_error_message()<br/>    <br/>        expected_error = &quot;This field is optional.&quot;<br/>    <br/>&gt;       assert error_message == expected_error, (<br/>            f&quot;Test Failed Intentionally! Expected: &#x27;{expected_error}&#x27;, but got: &#x27;{error_message}&#x27;&quot;<br/>        )<br/><span class="error">E       AssertionError: Test Failed Intentionally! Expected: &#x27;This field is optional.&#x27;, but got: &#x27;Address is a required field.&#x27;</span><br/><span class="error">E       assert &#x27;Address is a required field.&#x27; == &#x27;This field is optional.&#x27;</span><br/><span class="error">E         </span><br/><span class="error">E         - This field is optional.</span><br/><span class="error">E         + Address is a required field.</span><br/><br/>TestCases\Address\test_shipping_address.py:64: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">TestCases/Cart/test_cart.py::test_remove_wrong_product</td>
+          <td class="col-duration">36.99</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">setup = &lt;selenium.webdriver.chrome.webdriver.WebDriver (session=&quot;e286417df90db1bcd0273b3a34d4df27&quot;)&gt;<br/><br/>    @pytest.mark.cart<br/>    def test_remove_wrong_product(setup):<br/>        driver = setup<br/>        cart_page = CartPage(driver)<br/>    <br/>        cart_page.add_both_products_to_cart()<br/>        cart_page.go_to_cart()<br/>        logging.info(&quot;Two products added successfully to the cart.&quot;)<br/>    <br/>        cart_page.remove_specific_product_from_cart(&quot;HTML5 Forms&quot;)<br/>        remaining_products = cart_page.get_cart_product_name()<br/>    <br/>        if &quot;Mastering JavaScript&quot; in remaining_products:<br/>            logging.error(&quot;Test Failed as expected: The wrong product was NOT removed!&quot;)<br/>&gt;           assert False, &quot;Intentional Failure: The wrong product was removed!&quot;<br/><span class="error">E           AssertionError: Intentional Failure: The wrong product was removed!</span><br/><span class="error">E           assert False</span><br/><br/>TestCases\Cart\test_cart.py:79: AssertionError<br/> -------------------------------Captured log call-------------------------------- <br/>ERROR    root:cart_keywords.py:79 ❌ Failed to add &#x27;HTML5 Forms&#x27; to cart: Message: 
+Stacktrace:
+	GetHandleVerifier [0x00007FF64F5302F5+28725]
+	(No symbol) [0x00007FF64F492AE0]
+	(No symbol) [0x00007FF64F32510A]
+	(No symbol) [0x00007FF64F3793D2]
+	(No symbol) [0x00007FF64F3795FC]
+	(No symbol) [0x00007FF64F3C3407]
+	(No symbol) [0x00007FF64F39FFEF]
+	(No symbol) [0x00007FF64F3C0181]
+	(No symbol) [0x00007FF64F39FD53]
+	(No symbol) [0x00007FF64F36A0E3]
+	(No symbol) [0x00007FF64F36B471]
+	GetHandleVerifier [0x00007FF64F85F30D+3366989]
+	GetHandleVerifier [0x00007FF64F8712F0+3440688]
+	GetHandleVerifier [0x00007FF64F8678FD+3401277]
+	GetHandleVerifier [0x00007FF64F5FAAAB+858091]
+	(No symbol) [0x00007FF64F49E74F]
+	(No symbol) [0x00007FF64F49A304]
+	(No symbol) [0x00007FF64F49A49D]
+	(No symbol) [0x00007FF64F488B69]
+	BaseThreadInitThunk [0x00007FFE625FE8D7+23]
+	RtlUserThreadStart [0x00007FFE6327FBCC+44]
+
+ERROR    root:cart_keywords.py:100 ❌ Failed to add &#x27;Mastering JavaScript&#x27; to cart: Message: 
+Stacktrace:
+	GetHandleVerifier [0x00007FF64F5302F5+28725]
+	(No symbol) [0x00007FF64F492AE0]
+	(No symbol) [0x00007FF64F32510A]
+	(No symbol) [0x00007FF64F3793D2]
+	(No symbol) [0x00007FF64F3795FC]
+	(No symbol) [0x00007FF64F3C3407]
+	(No symbol) [0x00007FF64F39FFEF]
+	(No symbol) [0x00007FF64F3C0181]
+	(No symbol) [0x00007FF64F39FD53]
+	(No symbol) [0x00007FF64F36A0E3]
+	(No symbol) [0x00007FF64F36B471]
+	GetHandleVerifier [0x00007FF64F85F30D+3366989]
+	GetHandleVerifier [0x00007FF64F8712F0+3440688]
+	GetHandleVerifier [0x00007FF64F8678FD+3401277]
+	GetHandleVerifier [0x00007FF64F5FAAAB+858091]
+	(No symbol) [0x00007FF64F49E74F]
+	(No symbol) [0x00007FF64F49A304]
+	(No symbol) [0x00007FF64F49A49D]
+	(No symbol) [0x00007FF64F488B69]
+	BaseThreadInitThunk [0x00007FFE625FE8D7+23]
+	RtlUserThreadStart [0x00007FFE6327FBCC+44]
+
+ERROR    root:test_cart.py:78 Test Failed as expected: The wrong product was NOT removed!<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">TestCases/Login/test_login.py::test_login_invalid</td>
+          <td class="col-duration">10.03</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">setup = &lt;selenium.webdriver.chrome.webdriver.WebDriver (session=&quot;ad397c41062124b3874837827e75bdad&quot;)&gt;<br/><br/>    @pytest.mark.login<br/>    def test_login_invalid(setup):<br/>        &quot;&quot;&quot;Test invalid login functionality&quot;&quot;&quot;<br/>        driver = setup<br/>        login_page = LoginKeywords(driver)<br/>    <br/>        email = test_data[&quot;invalid_user&quot;][&quot;email&quot;]<br/>        password = test_data[&quot;invalid_user&quot;][&quot;password&quot;]<br/>    <br/>        logging.info(f&quot;Attempting login with invalid email: {email}&quot;)<br/>        login_page.enter_email(email)<br/>        login_page.enter_password(password)<br/>        login_page.click_login()<br/>    <br/>&gt;       assert not login_page.is_login_successful(), &quot;Login should have failed for invalid user!&quot;<br/><span class="error">E       AssertionError: Login should have failed for invalid user!</span><br/><span class="error">E       assert not True</span><br/><span class="error">E        +  where True = is_login_successful()</span><br/><span class="error">E        +    where is_login_successful = &lt;Resources.Login.login_keywords.LoginKeywords object at 0x00000164F2782A80&gt;.is_login_successful</span><br/><br/>TestCases\Login\test_login.py:79: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">TestCases/Registration/test_registration.py::test_register_existing_user</td>
+          <td class="col-duration">8.92</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">setup = &lt;selenium.webdriver.chrome.webdriver.WebDriver (session=&quot;fe6bf3b365700e2f70585b6cf7cd3b61&quot;)&gt;<br/><br/>    @pytest.mark.registration<br/>    def test_register_existing_user(setup):<br/>        driver = setup<br/>        registration_page = RegistrationPage(driver)<br/>    <br/>        email = &quot;adisethi7@gmail.com&quot;<br/>        password = &quot;zxcvbnmA@199807&quot;<br/>    <br/>        logging.info(f&quot;Attempting registration with an existing email: {email}&quot;)<br/>    <br/>        try:<br/>            registration_page.enter_email(email)<br/>            registration_page.enter_password(password)<br/>            registration_page.click_register()<br/>    <br/>            error_locator = &quot;//li[contains(text(), &#x27;An account is already registered with your email address. Please login.&#x27;)]&quot;<br/>            if driver.find_elements(By.XPATH, error_locator):<br/>                logging.error(&quot;Test failed! An account is already registered with this email.&quot;)<br/>&gt;               assert False, &quot;An account is already registered with your email address. Please login.&quot;<br/><span class="error">E               AssertionError: An account is already registered with your email address. Please login.</span><br/><span class="error">E               assert False</span><br/><br/>TestCases\Registration\test_registration.py:79: AssertionError<br/> -------------------------------Captured log call-------------------------------- <br/>ERROR    root:test_registration.py:78 Test failed! An account is already registered with this email.
+ERROR    root:test_registration.py:84 Test failed due to: An account is already registered with your email address. Please login.
+assert False<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">TestCases/Address/test_billing_address.py::test_navigate_to_addresses</td>
+          <td class="col-duration">22.02</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">TestCases/Cart/test_cart.py::test_add_and_validate_product</td>
+          <td class="col-duration">13.51</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">TestCases/Cart/test_cart.py::test_add_and_remove_product</td>
+          <td class="col-duration">15.35</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">TestCases/Login/test_login.py::test_login_valid</td>
+          <td class="col-duration">10.32</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">TestCases/Registration/test_registration.py::test_register_new_user</td>
+          <td class="col-duration">11.23</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody></table></body></html>
