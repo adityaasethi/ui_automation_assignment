@@ -10,7 +10,6 @@ ui_automation_assignment/
 │-- Resources/         # Contains business logic (keywords)
 │-- TestCases/         # Contains test cases
 │-- TestData/          # Contains test data in JSON format
-│-- reports/           # Stores generated HTML reports
 │-- requirements.txt   # Lists required dependencies
 │-- README.md          # Project documentation
 ```
