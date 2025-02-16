@@ -53,12 +53,14 @@ pytest -m addresses --html=reports/address_test_report.html
 ### Login Tests
 Positive:
 - **test_login_valid_user**: Verifies successful login with valid credentials.
+
 Negative:
 - **test_login_invalid_user**: Checks login failure with incorrect credentials and causes a failure.
 
 ### Address Tests
 Positive:
 - **test_billing_address**: Validates updating the billing address and asserting the saved details. 
+
 Negative:
 - **test_shipping_address_negative**: Tries to save an empty shipping address to verify error handling and causes a failure.
 
@@ -66,12 +68,14 @@ Negative:
 Positive:
 - **test_add_to_cart**: Adds items to the cart and verifies they appear correctly.
 - **test_remove_from_cart**: Removes items from the cart and ensures they are deleted successfully.
+
 Negative:
 - **test_remove_wrong_product**: Adds two products, and removes the wrong/unexpected one and causes a failure.
 
 ### Registration Tests
 Positive:
 - **test_register_new_user**: Attempts user registration with unique credentials.
+
 Negative:
 - **test_register_existing_user**: Tries registering an already registered email to confirm proper error handling and causes a failure.
 
